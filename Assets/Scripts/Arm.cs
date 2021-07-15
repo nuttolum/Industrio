@@ -4,95 +4,126 @@ using UnityEngine;
 
 public class Arm : MonoBehaviour
 {
-    public GameObject target;
-    public GameObject holdingPosObj;
-    public bool moving = false;
-    public bool holding = false;
-    public GameObject dropPosObj;
-    Vector3 dropPos;
-    public GameObject Obj;
+    public Transform targetPoint;
+    public Transform dropPoint;
+    public GameObject holdingObject;
+    public Transform holdPoint;
+    Rigidbody holdingRB;
+    public float speed = 2f;
+    public string state = "idle";
+    public bool powered = true;
+    float duration;
+        public delegate void GrabObjectEvent();
+        public delegate void StartMovingEvent();
+        public delegate void StopMovingEvent();
+        public delegate void DropEvent();
+        public event GrabObjectEvent onGrabObject;
+        public event StartMovingEvent onStartMoving;
+        public event StopMovingEvent onStopMoving;
+        public event DropEvent onDrop;
     void Start() {
-        dropPos = dropPosObj.transform.position;
-        target.transform.position = holdingPosObj.transform.position;
+        duration = 1/speed;
     }
-    void OnTriggerEnter(Collider other) {
-        if(other.gameObject.tag == "factoryObj" && holding == false) {
-            Obj = other.gameObject;
-            pickupObj(Obj);
-        }
-    }
-    void pickupObj(GameObject pickupObj) {
-        pickupObj.GetComponent<Rigidbody>().isKinematic = true;
-        Vector3 holdingPos = holdingPosObj.transform.position;
-        Move(pickupObj.transform.position, 2f);
-    }
-
     void Update() {
-        if(Obj != null) {
-        if(Obj.transform.position == target.transform.position && holding == false) {
-            holding = true;
-            Move(holdingPosObj.transform.position, 2f);
-        } else if(holding == true) {
-            Obj.transform.position = target.transform.position;
-        } else if(holding == true && Obj.transform.position == dropPos) {
-            DropInstant();
+        if(!powered) {
+            return;
         }
-        }
-        }
-    IEnumerator MoveCo(Vector3 endPos, float duration) {
-        moving = true;
-        Vector3 startPos = target.transform.position;
-        Quaternion startRot = target.transform.rotation;
-        for (float t = 0f; t < duration; t += Time.deltaTime)
-        {
-
-            float normalizedTime = t / duration;
-            if(Obj) {
-            Quaternion desiredRot = Quaternion.LookRotation(target.transform.position - Obj.transform.position);
-            target.transform.rotation = Quaternion.Lerp(startRot, desiredRot, normalizedTime);
-            }
-            target.transform.position = Vector3.Lerp(startPos, endPos, normalizedTime);
-            yield return null;
-        }
-        moving = false;
-        target.transform.position = endPos;
-    }
-    public void Move(Vector3 endPos, float duration) {
-        StartCoroutine(MoveCo(endPos, duration));
-    }
-    public void DropInstant() {
-        print("w");
-        holding = false;
-        if(Obj.GetComponent<Rigidbody>() != null) Obj.GetComponent<Rigidbody>().isKinematic = false;
-        Obj = null;
         
     }
+    public void GrabObject(ProductionObject objectToGrab) {
+        objectToGrab.holdingArm = this;
+        holdingObject = objectToGrab.gameObject;
+        objectToGrab.GetComponent<Rigidbody>().isKinematic = true;
+        StartCoroutine(GrabObjectCo(objectToGrab.gameObject));
+    }
     public void Drop() {
-        StartCoroutine(DropCo(2f));
+        state = "idle";
+        StartCoroutine(DropCo());
     }
-    IEnumerator DropCo(float duration) {
-        moving = true;
-        Vector3 startPos = target.transform.position;
+    public void DropInstant() {
+        onDrop?.Invoke();
+        state = "idle";
+        if(holdingObject) {
+        holdingObject.GetComponent<ProductionObject>().holdingArm = null;
+        holdingObject.transform.parent = null;
+        holdingObject = null;
+        holdingRB.isKinematic = false;
+        holdingRB = null;
+        }
+    }
+    public void MoveToPos(Vector3 position) {
+        StartCoroutine(MoveToPosCo(position));
+    }
+    public void MoveWithRot(Vector3 position, Quaternion rotation) {
+        StartCoroutine(MoveWithRotCo(position, rotation));
+    }
+    IEnumerator DropCo() {
+        onStartMoving?.Invoke();
+        state = "moving";
+        Vector3 startPos = targetPoint.position;
         for (float t = 0f; t < duration; t += Time.deltaTime)
         {
-            float normalizedTime = t / duration;
-            target.transform.position = Vector3.Lerp(startPos, dropPos, normalizedTime);
+            float interval = t / duration;
+            targetPoint.position = Vector3.Lerp(startPos, dropPoint.position, interval);
             yield return null;
         }
-        print("dropping instantly");
-        target.transform.position = dropPos;
+        onStopMoving?.Invoke();
+        targetPoint.position = dropPoint.position;
         DropInstant();
-        moving = false; 
+        state = "idle";
     }
-    IEnumerator RotateObj(Vector3 desiredEuler, float duration) {
-        Vector3 startRot = Obj.transform.eulerAngles;
+    IEnumerator GrabObjectCo(GameObject objectToGrab) {
+        onStartMoving?.Invoke();
+        state = "moving";
+        Vector3 startPos = targetPoint.position;
         for (float t = 0f; t < duration; t += Time.deltaTime)
         {
-            float normalizedTime = t / duration;
-            Obj.transform.eulerAngles = Vector3.Lerp(startRot, desiredEuler, normalizedTime);
+            float interval = t / duration;
+            targetPoint.position = Vector3.Lerp(startPos, objectToGrab.transform.position, interval);
             yield return null;
         }
-        target.transform.eulerAngles = desiredEuler;
+        onStopMoving?.Invoke();
+        onGrabObject?.Invoke();
+        targetPoint.position = objectToGrab.transform.position;
+        holdingObject = objectToGrab;
+        holdingObject.transform.parent = targetPoint;
+        holdingRB = holdingObject.GetComponent<Rigidbody>();
+        MoveWithRot(holdPoint.position, holdPoint.rotation);
     }
 
+    IEnumerator MoveToPosCo(Vector3 position) {
+        onStartMoving?.Invoke();
+        state = "moving";
+        Vector3 startPos = targetPoint.position;
+        for (float t = 0f; t < duration; t += Time.deltaTime)
+        {
+            float interval = t / duration;
+            targetPoint.position = Vector3.Lerp(startPos, position, interval);
+            yield return null;
+        }
+        state = "idle";
+        targetPoint.position = position;
+    }
+    IEnumerator MoveWithRotCo(Vector3 position, Quaternion rotation) {
+        onStartMoving?.Invoke();
+        state = "moving";
+        Vector3 startPos = targetPoint.position;
+        Quaternion startRot = targetPoint.rotation;
+        Quaternion startObjRot = holdingObject.transform.rotation;
+        for (float t = 0f; t < duration; t += Time.deltaTime)
+        {
+            float interval = t / duration;
+            targetPoint.position = Vector3.Lerp(startPos, position, interval);
+            targetPoint.rotation = Quaternion.Lerp(startRot, rotation, interval);
+            holdingObject.transform.rotation = Quaternion.Lerp(startObjRot, rotation, interval);
+            yield return null;
+        }
+        onStopMoving?.Invoke();
+        state = "waiting";
+        targetPoint.rotation = rotation;
+        targetPoint.position = position;
+    }
+    public void Test() {
+        return;
+    }
 }

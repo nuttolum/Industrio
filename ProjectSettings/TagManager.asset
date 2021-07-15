@@ -5,14 +5,16 @@ TagManager:
   serializedVersion: 2
   tags:
   - factoryObj
+  - display
+  - moveHandle
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - factoryObj
   - Water
   - UI
-  - 
+  - Handle
   - 
   - 
   - 
