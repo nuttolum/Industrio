@@ -6,7 +6,9 @@ public class CamSwitch : MonoBehaviour
 {
     public Camera[] cameras;
     public Camera activeCamera;
+    public bool focused = true;
     void Start()
+    
     {
         cameras = FindObjectsOfType<Camera>();
         foreach(Camera camera in cameras) {

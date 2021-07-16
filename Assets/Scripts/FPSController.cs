@@ -30,15 +30,16 @@ public class FPSController : MonoBehaviour
     Vector3 rotationSmoothVelocity;
     Vector3 currentRotation;
     GameObject heldObj;
+    GameObject heldParent;
     GameObject heldPoint;
-    bool lookingDown = false;
     bool jumping;
     float lastGroundedTime;
     bool disabled;
+    CamSwitch camSwitch;
 
     void Start()
     {
-
+        camSwitch = FindObjectOfType<CamSwitch>();
         cam = Camera.main;
         heldPoint = new GameObject();
         heldPoint.transform.parent = cam.transform;
@@ -57,6 +58,10 @@ public class FPSController : MonoBehaviour
     }
     void FixedUpdate()
     {
+        if(!camSwitch.focused) {
+            heldObj = null;
+            return;
+        }
         if (Input.GetMouseButton(0) && heldObj != null)
         {
             int layerMask = 1 << 3;
@@ -78,6 +83,10 @@ public class FPSController : MonoBehaviour
     }
     void Update()
     {
+        if(!camSwitch.focused) {
+            heldObj = null;
+            return;
+        }
         if (Input.GetKeyDown(KeyCode.P))
         {
             Cursor.lockState = CursorLockMode.None;
@@ -99,14 +108,12 @@ public class FPSController : MonoBehaviour
                 if (hit.collider.gameObject.GetComponent<ProductionObject>() != null)
                 {
                     heldObj = hit.collider.gameObject;
-                    heldObj.transform.parent = Camera.main.transform;
 
                 }
             }
         }
         if (Input.GetMouseButtonUp(0) && heldObj != null)
         {
-            heldObj.transform.parent = null;
             heldObj = null;
         }
 
@@ -115,17 +122,16 @@ public class FPSController : MonoBehaviour
         {
             return;
         }
-        if(Input.GetKeyDown(KeyCode.Tab)) lookingDown = false;
-        if (Input.GetKeyDown(KeyCode.E) && lookingDown == false)
+
+        if (Input.GetKeyDown(KeyCode.E))
         {
             RaycastHit hit;
             if (Physics.Raycast(cam.transform.position, cam.transform.forward, out hit, 10f))
             {
                 print(hit.collider.gameObject.tag);
-                if (hit.collider.gameObject.tag == "display" && hit.collider.gameObject.transform.parent.GetComponent<BaseScript>().state == "idle")
+                if (hit.collider.gameObject.tag == "display" && (hit.collider.gameObject.transform.parent.GetComponent<BaseScript>().state == "idle" || hit.collider.gameObject.transform.parent.GetComponent<BaseScript>().state == "paused"))
                 {
-                    lookingDown = true;
-                    hit.collider.gameObject.transform.parent.GetComponent<BaseScript>().SwitchCam();
+                    hit.collider.gameObject.transform.parent.GetComponent<BaseScript>().OpenControlPanel();
                 }
             }
         }

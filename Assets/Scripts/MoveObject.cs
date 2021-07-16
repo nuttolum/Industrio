@@ -14,7 +14,7 @@ public class MoveObject : MonoBehaviour
 
     void Update()
     {
-        if(movingObj == null) movingObj = transform.parent.gameObject;
+        movingObj = transform.parent.gameObject;
         if(Input.GetKeyDown(KeyCode.R)) {
             rotation = !rotation;
         }

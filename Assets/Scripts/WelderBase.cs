@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using System.Linq;
 public class WelderBase : BaseScript
 {
     public Arm pickupArmLeft;
@@ -23,6 +23,8 @@ public class WelderBase : BaseScript
         case "editing":
         
         break;
+        case "paused":
+        break;
         default:
         break;
         
@@ -33,17 +35,32 @@ public class WelderBase : BaseScript
         weldingArm.onGrabObject -= DropObject;
     }
     GameObject Weld() {
-        GameObject rootPart = pickupArmLeft.holdingObject;
-        GameObject childPart = pickupArmRight.holdingObject;
+        GameObject parent = new GameObject();
+        GameObject rootPart = pickupArmRight.holdingObject;
+        pickupArmLeft.holdingObject.GetComponent<ProductionObject>().connectedObjects.Add(pickupArmRight.holdingObject.GetComponent<ProductionObject>());
+        pickupArmRight.holdingObject.GetComponent<ProductionObject>().connectedObjects.Add(pickupArmLeft.holdingObject.GetComponent<ProductionObject>());
+        List<ProductionObject> Objects = new List<ProductionObject>();
+        Objects = pickupArmLeft.holdingObject.GetComponent<ProductionObject>().connectedObjects.Union(pickupArmRight.holdingObject.GetComponent<ProductionObject>().connectedObjects).ToList();
         pickupArmRight.DropInstant();
         pickupArmLeft.DropInstant();
-        Destroy(childPart.GetComponent<ProductionObject>());
-        rootPart.GetComponent<ProductionObject>().Rebound();
-        var rootJoint = rootPart.AddComponent<FixedJoint>();
-        var childJoint = childPart.AddComponent<FixedJoint>();
-        rootJoint.connectedBody = childPart.GetComponent<Rigidbody>();
-        childJoint.connectedBody = rootPart.GetComponent<Rigidbody>();
-        childPart.transform.parent = rootPart.transform;
+        List<GameObject> gameObjects = new List<GameObject>();
+        foreach(ProductionObject obj in Objects) {
+            gameObjects.Add(obj.gameObject);
+            obj.parent = parent;
+        }
+        foreach (GameObject child in gameObjects)
+        {
+            foreach (GameObject childToConnect in gameObjects)
+            {
+                if(childToConnect != child) {
+                FixedJoint joint = child.AddComponent<FixedJoint>();
+                joint.connectedBody = childToConnect.GetComponent<Rigidbody>();
+                }
+            }
+            child.transform.parent = parent.transform;
+        }
+
+
         return rootPart;
 
     }

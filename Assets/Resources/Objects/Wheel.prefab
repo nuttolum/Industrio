@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 5940441776774729492}
   - component: {fileID: 3104028324685167943}
   m_Layer: 3
-  m_Name: Cylinder
+  m_Name: Axle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -191,6 +191,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   holdingArm: {fileID: 0}
+  parent: {fileID: 0}
+  root: 1
+  boundingBox: {fileID: 6052153647124177891}
+  connectedObjects: []
+  objectName: Wheel
 --- !u!1 &5011368129844167319
 GameObject:
   m_ObjectHideFlags: 0
@@ -204,7 +209,7 @@ GameObject:
   - component: {fileID: 6856837185093342555}
   - component: {fileID: 7377591644248780708}
   m_Layer: 3
-  m_Name: Cylinder (1)
+  m_Name: Tire
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -317,7 +322,7 @@ GameObject:
   - component: {fileID: 4266435359468343268}
   - component: {fileID: 6471800167395934780}
   m_Layer: 3
-  m_Name: Cube
+  m_Name: Base
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

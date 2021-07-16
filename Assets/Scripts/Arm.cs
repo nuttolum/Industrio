@@ -8,56 +8,88 @@ public class Arm : MonoBehaviour
     public Transform dropPoint;
     public GameObject holdingObject;
     public Transform holdPoint;
+        public TMPro.TextMeshPro text;
     Rigidbody holdingRB;
     public float speed = 2f;
     public string state = "idle";
     public bool powered = true;
     float duration;
-        public delegate void GrabObjectEvent();
-        public delegate void StartMovingEvent();
-        public delegate void StopMovingEvent();
-        public delegate void DropEvent();
-        public event GrabObjectEvent onGrabObject;
-        public event StartMovingEvent onStartMoving;
-        public event StopMovingEvent onStopMoving;
-        public event DropEvent onDrop;
-    void Start() {
-        duration = 1/speed;
+    public delegate void GrabObjectEvent();
+    public delegate void StartMovingEvent();
+    public delegate void StopMovingEvent();
+    public delegate void DropEvent();
+    public event GrabObjectEvent onGrabObject;
+    public event StartMovingEvent onStartMoving;
+    public event StopMovingEvent onStopMoving;
+    public event DropEvent onDrop;
+    void Start()
+    {
+        duration = 1 / speed;
     }
-    void Update() {
-        if(!powered) {
+    void Update()
+    {
+        text.text = state;
+        if (!powered)
+        {
             return;
         }
-        
+
     }
-    public void GrabObject(ProductionObject objectToGrab) {
+    public void GrabObject(ProductionObject objectToGrab)
+    {
         objectToGrab.holdingArm = this;
         holdingObject = objectToGrab.gameObject;
         objectToGrab.GetComponent<Rigidbody>().isKinematic = true;
+                foreach(ProductionObject obj in holdingObject.GetComponent<ProductionObject>().connectedObjects) {
+            foreach(Collider col in obj.GetComponents<Collider>()) {
+                if(!col.isTrigger)
+                col.enabled = false;
+            }
+        }
         StartCoroutine(GrabObjectCo(objectToGrab.gameObject));
     }
-    public void Drop() {
+    public void Drop()
+    {
         state = "idle";
         StartCoroutine(DropCo());
     }
-    public void DropInstant() {
+    public void DropInstant()
+    {
         onDrop?.Invoke();
         state = "idle";
-        if(holdingObject) {
-        holdingObject.GetComponent<ProductionObject>().holdingArm = null;
-        holdingObject.transform.parent = null;
-        holdingObject = null;
-        holdingRB.isKinematic = false;
-        holdingRB = null;
+        if (holdingObject)
+        {
+            foreach (ProductionObject obj in holdingObject.GetComponent<ProductionObject>().connectedObjects)
+            {
+                foreach (Collider col in obj.GetComponents<Collider>())
+                {
+                    col.enabled = true;
+                }
+            }
+            holdingObject.GetComponent<ProductionObject>().holdingArm = null;
+            if (holdingObject.GetComponent<ProductionObject>().parent)
+            {
+                holdingObject.transform.parent = holdingObject.GetComponent<ProductionObject>().parent.transform;
+            }
+            else
+            {
+                holdingObject.transform.parent = null;
+            }
+            holdingObject = null;
+            holdingRB.isKinematic = false;
+            holdingRB = null;
         }
     }
-    public void MoveToPos(Vector3 position) {
+    public void MoveToPos(Vector3 position)
+    {
         StartCoroutine(MoveToPosCo(position));
     }
-    public void MoveWithRot(Vector3 position, Quaternion rotation) {
+    public void MoveWithRot(Vector3 position, Quaternion rotation)
+    {
         StartCoroutine(MoveWithRotCo(position, rotation));
     }
-    IEnumerator DropCo() {
+    IEnumerator DropCo()
+    {
         onStartMoving?.Invoke();
         state = "moving";
         Vector3 startPos = targetPoint.position;
@@ -72,7 +104,8 @@ public class Arm : MonoBehaviour
         DropInstant();
         state = "idle";
     }
-    IEnumerator GrabObjectCo(GameObject objectToGrab) {
+    IEnumerator GrabObjectCo(GameObject objectToGrab)
+    {
         onStartMoving?.Invoke();
         state = "moving";
         Vector3 startPos = targetPoint.position;
@@ -91,7 +124,8 @@ public class Arm : MonoBehaviour
         MoveWithRot(holdPoint.position, holdPoint.rotation);
     }
 
-    IEnumerator MoveToPosCo(Vector3 position) {
+    IEnumerator MoveToPosCo(Vector3 position)
+    {
         onStartMoving?.Invoke();
         state = "moving";
         Vector3 startPos = targetPoint.position;
@@ -104,7 +138,8 @@ public class Arm : MonoBehaviour
         state = "idle";
         targetPoint.position = position;
     }
-    IEnumerator MoveWithRotCo(Vector3 position, Quaternion rotation) {
+    IEnumerator MoveWithRotCo(Vector3 position, Quaternion rotation)
+    {
         onStartMoving?.Invoke();
         state = "moving";
         Vector3 startPos = targetPoint.position;
@@ -123,7 +158,8 @@ public class Arm : MonoBehaviour
         targetPoint.rotation = rotation;
         targetPoint.position = position;
     }
-    public void Test() {
+    public void Test()
+    {
         return;
     }
 }
