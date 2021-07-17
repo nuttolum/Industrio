@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using System.IO;
+using CustomMethodsName;
 public class WelderBase : BaseScript
 {
     public Arm pickupArmLeft;
@@ -14,11 +15,12 @@ public class WelderBase : BaseScript
         case "unpowered":
         break;
         case "idle":
-        if(pickupArmLeft.state == "waiting" && pickupArmRight.state == "waiting") {
+        if(pickupArmLeft.state == "waiting" && pickupArmRight.state == "waiting" && weldingArm.state == "idle") {
             GameObject newObject = Weld();
             weldingArm.GrabObject(newObject.GetComponent<ProductionObject>());
+            weldingArm.onGrabObject += DropObject;
         }
-        weldingArm.onGrabObject += DropObject;
+        
         break;
         case "working":
         break;
@@ -32,8 +34,10 @@ public class WelderBase : BaseScript
     }
     }
     void DropObject() {
-        weldingArm.Drop();
+        print("grabbed");
         weldingArm.onGrabObject -= DropObject;
+        weldingArm.Drop();
+        
     }
     GameObject Weld() {
         GameObject parent = new GameObject();
@@ -47,23 +51,13 @@ public class WelderBase : BaseScript
         Objects = pickupArmLeft.holdingObject.GetComponent<ProductionObject>().connectedObjects.Union(pickupArmRight.holdingObject.GetComponent<ProductionObject>().connectedObjects).ToList();
         pickupArmRight.DropInstant();
         pickupArmLeft.DropInstant();
-        List<GameObject> gameObjects = new List<GameObject>();
         foreach(ProductionObject obj in Objects) {
-            gameObjects.Add(obj.gameObject);
             obj.parent.transform.parent = parent.transform;
             obj.parent = parent;
         }
-        foreach (GameObject child in gameObjects)
-        {
-            foreach (GameObject childToConnect in gameObjects)
-            {
-                if(childToConnect != child) {
-                FixedJoint joint = child.AddComponent<FixedJoint>();
-                joint.connectedBody = childToConnect.GetComponent<Rigidbody>();
-                }
-            }
-            
-        }
+        parent.GetComponent<ProductionObject>().parent = parent;
+        parent.GetComponent<ProductionObject>().ReJoin(null);
+        CustomMethods.IgnoreCollisionBetweenObjects(parent, parent, true);
 
 
         return rootPart;

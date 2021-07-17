@@ -8,7 +8,7 @@ public class Arm : MonoBehaviour
     public Transform dropPoint;
     public GameObject holdingObject;
     public Transform holdPoint;
-        public TMPro.TextMeshPro text;
+    public TMPro.TextMeshPro text;
     Rigidbody holdingRB;
     public float speed = 2f;
     public string state = "idle";
@@ -37,29 +37,40 @@ public class Arm : MonoBehaviour
     }
     public void GrabObject(ProductionObject objectToGrab)
     {
-        objectToGrab.holdingArm = this;
-        holdingObject = objectToGrab.gameObject;
-        objectToGrab.GetComponent<Rigidbody>().isKinematic = true;
-        holdingObject.GetComponent<ProductionObject>().ToggleCollision(false);
-        StartCoroutine(GrabObjectCo(objectToGrab.gameObject));
+        state = "moving";
+        holdingObject = objectToGrab.transform.root.gameObject;
+        holdingObject.GetComponent<ProductionObject>().holdingArm = this;
+        CenterParent(holdingObject);
+        foreach (ProductionObject po in holdingObject.GetComponentsInChildren<ProductionObject>())
+        {
+            if (po.GetComponent<Rigidbody>()) po.GetComponent<Rigidbody>().isKinematic = true;
+            po.ToggleCollision(false);
+        }
+        StartCoroutine(GrabObjectCo(holdingObject));
     }
     public void Drop()
     {
+        print("drop");
         state = "idle";
         StartCoroutine(DropCo());
     }
     public void DropInstant()
     {
-        onDrop?.Invoke();
-        state = "idle";
+
         if (holdingObject)
         {
-            holdingObject.GetComponent<ProductionObject>().ToggleCollision(true);
+            onDrop?.Invoke();
+            state = "idle";
+            print("w");
+            foreach (ProductionObject po in holdingObject.GetComponentsInChildren<ProductionObject>())
+            {
+                if (po.GetComponent<Rigidbody>()) po.GetComponent<Rigidbody>().isKinematic = false;
+                po.ToggleCollision(true);
+            }
+            CenterParent(holdingObject);
             holdingObject.GetComponent<ProductionObject>().holdingArm = null;
-            holdingObject.GetComponent<ProductionObject>().parent.transform.parent = null;
+            holdingObject.GetComponent<ProductionObject>().transform.parent = null;
             holdingObject = null;
-            holdingRB.isKinematic = false;
-            holdingRB = null;
         }
     }
     public void MoveToPos(Vector3 position)
@@ -100,9 +111,7 @@ public class Arm : MonoBehaviour
         onStopMoving?.Invoke();
         onGrabObject?.Invoke();
         targetPoint.position = objectToGrab.transform.position;
-        holdingObject = objectToGrab;
         holdingObject.GetComponent<ProductionObject>().parent.transform.parent = targetPoint;
-        holdingRB = holdingObject.GetComponent<Rigidbody>();
         MoveWithRot(holdPoint.position, holdPoint.rotation);
     }
 
@@ -140,13 +149,62 @@ public class Arm : MonoBehaviour
         targetPoint.rotation = rotation;
         targetPoint.position = position;
     }
-    public void Test()
+    public void CenterParent(GameObject objectToSave)
     {
-        return;
+        List<Vector3> positions = new List<Vector3>();
+        List<ProductionObject> children = new List<ProductionObject>();
+        foreach (ProductionObject child in objectToSave.GetComponentsInChildren<ProductionObject>())
+        {
+            if (child.gameObject != objectToSave && child.GetComponent<Rigidbody>())
+            {
+                positions.Add(child.transform.position);
+
+            }
+            if (child.transform.parent == objectToSave.transform)
+            {
+
+                children.Add(child);
+
+            }
+        }
+        foreach (ProductionObject child in children)
+        {
+            child.transform.parent = null;
+        }
+
+        if (positions.Count == 0)
+        {
+            positions.Add(objectToSave.transform.position);
+        }
+        Vector3 averagePos = GetMeanVector(positions);
+        objectToSave.transform.position = averagePos;
+        foreach (ProductionObject child in children)
+        {
+            child.transform.parent = objectToSave.transform;
+        }
     }
+    private Vector3 GetMeanVector(List<Vector3> positions)
+    {
+        if (positions.Count == 0)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 meanVector = Vector3.zero;
+
+        foreach (Vector3 pos in positions)
+        {
+            meanVector += pos;
+        }
+
+        return (meanVector / positions.Count);
+    }
+
 }
+
 [Serializable]
-public class ArmData {
+public class ArmData
+{
     public string name;
     public Vector3 holdPos;
     public Quaternion holdRot;

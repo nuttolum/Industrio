@@ -22,27 +22,29 @@ public class SaveUI : MonoBehaviour
     }
     void Update()
     {
-
-        if (Input.GetKeyDown(KeyCode.G) && !loadCanvas.enabled)
+        if (camSwitch.focused == true)
         {
-            RaycastHit hit;
-            LayerMask Layermask = LayerMask.GetMask("factoryObj");
-            if (Physics.Raycast(camSwitch.activeCamera.transform.position, camSwitch.activeCamera.transform.forward, out hit, 15f, Layermask))
+            if (Input.GetKeyDown(KeyCode.G) && !loadCanvas.enabled)
             {
-                saveCanvas.enabled = true;
-                objToSave = hit.transform.root.gameObject;
-                //SaveObject.CenterParent(objToSave);
+                RaycastHit hit;
+                LayerMask Layermask = LayerMask.GetMask("factoryObj");
+                if (Physics.Raycast(camSwitch.activeCamera.transform.position, camSwitch.activeCamera.transform.forward, out hit, 15f, Layermask))
+                {
+                    saveCanvas.enabled = true;
+                    objToSave = hit.transform.root.gameObject;
+                    //SaveObject.CenterParent(objToSave);
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                    camSwitch.focused = false;
+                }
+            }
+            if (Input.GetKeyDown(KeyCode.L) && !saveCanvas.enabled)
+            {
+                loadCanvas.enabled = true;
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
                 camSwitch.focused = false;
             }
-        }
-        if (Input.GetKeyDown(KeyCode.L) && !saveCanvas.enabled)
-        {
-            loadCanvas.enabled = true;
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-            camSwitch.focused = false;
         }
     }
     public void saveButton()

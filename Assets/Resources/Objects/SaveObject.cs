@@ -106,6 +106,7 @@ public class SaveObject : MonoBehaviour
         ProductionObject[] children = loadedObj.GetComponentsInChildren<ProductionObject>();
         foreach (ProductionObject child in children)
         {
+            child.parent = child.transform.root.gameObject;
             foreach (ProductionObject childToConnect in children)
             {
                 if (childToConnect != child && child.GetComponent<Rigidbody>() && childToConnect.GetComponent<Rigidbody>())

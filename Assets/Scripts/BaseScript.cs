@@ -41,8 +41,11 @@ public class BaseScript : MonoBehaviour
         {
             Directory.CreateDirectory(Application.persistentDataPath + "/Machines/" + type);
         }
-        if(machineName != null) {
+        if(machineName != "") {
             LoadData(machineName);
+        } else {
+            machineName = "Default" + type;
+            SaveData();
         }
         cameraSwitch = FindObjectOfType<CamSwitch>();
     }
@@ -65,7 +68,7 @@ public class BaseScript : MonoBehaviour
     }
     void Update()
     {
-        text.text = state;
+            text.text = state;
         foreach (Arm arm in arms)
         {
             if (arm.state == "moving")
@@ -111,8 +114,8 @@ public class BaseScript : MonoBehaviour
                 {
                     if (arm.holdingObject != null)
                     {
-                        arm.holdPoint.rotation = arm.holdingObject.transform.rotation;
-                        arm.holdPoint.position = arm.holdingObject.transform.position;
+                        arm.holdPoint.rotation = arm.targetPoint.transform.rotation;
+                        arm.holdPoint.position = arm.targetPoint.transform.position;
                     }
                 }
                 machineName = nameEdit.GetComponentInChildren<InputField>().text;
@@ -134,6 +137,7 @@ public class BaseScript : MonoBehaviour
         cam.transform.rotation = Camera.main.transform.rotation;
         Vector3 startPos = cam.transform.position;
         Quaternion startRot = cam.transform.rotation;
+        cameraSwitch.focused = false;
         FindObjectOfType<CamSwitch>().Switch(cam);
         for (float t = 0f; t < duration; t += Time.deltaTime)
         {
@@ -149,6 +153,7 @@ public class BaseScript : MonoBehaviour
         nameEdit.enabled = false;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        cameraSwitch.focused = true;
         Vector3 startPos = cam.transform.position;
         Quaternion startRot = cam.transform.rotation;
 
@@ -206,6 +211,7 @@ public class BaseScript : MonoBehaviour
     public void LoadData()
     {
         string saveFile = Application.persistentDataPath + "/Machines/" + type + "/" + machineName + ".data";
+        if(File.Exists(saveFile)) {
         string json = File.ReadAllText(saveFile);
         MachineData data = JsonUtility.FromJson<MachineData>(json);
         foreach (Arm child in arms)
@@ -220,6 +226,7 @@ public class BaseScript : MonoBehaviour
                     child.targetPoint.rotation = arm.holdRot;
                 }
             }
+        }
         }
     }
         public void LoadData(string loadName)
@@ -297,7 +304,6 @@ public class BaseScript : MonoBehaviour
                     }
                 }
             }
-            print(pickupObj);
             if (state == "idle") state = "working";
             if (GetClosestArm(pickupObj.gameObject).holdingObject == null) GetClosestArm(pickupObj.gameObject).GrabObject(pickupObj);
         }
