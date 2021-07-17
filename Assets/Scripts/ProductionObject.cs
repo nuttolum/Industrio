@@ -14,8 +14,14 @@ public class ProductionObject : MonoBehaviour
     {
 
     }
-    void Start() {
+    void Awake() {
         connectedObjects.Add(this);
+    }
+    void Update() {
+        if(parent == null) {
+            parent = gameObject;
+        }
+
     }
     public void Rebound()
     {
@@ -26,5 +32,14 @@ public class ProductionObject : MonoBehaviour
         }
         boundingBox.isTrigger = true;
         boundingBox.size = combinedBounds.size;
+    }
+    public void ToggleCollision(bool toggled) {
+        foreach(ProductionObject obj in connectedObjects) {
+        foreach(Collider col in obj.GetComponentsInChildren<Collider>()) {
+            if(!col.isTrigger) {
+                col.enabled = toggled;
+            }
+        }
+        }
     }
 }

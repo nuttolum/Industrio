@@ -1,13 +1,18 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using System.Linq;
+using System.IO;
+using UnityEngine.UI;
 public class BaseScript : MonoBehaviour
 {
     public string state = "idle";
     public Camera cam;
     Camera PlayerCam;
     public Canvas controlPanel;
+    public Canvas nameEdit;
+    public string machineName;
+    public string type;
     CamSwitch cameraSwitch;
     Vector3 camPos;
     Quaternion camRot;
@@ -16,16 +21,29 @@ public class BaseScript : MonoBehaviour
     private int workingArms;
     public TMPro.TextMeshPro text;
     GameObject move;
+
     List<GameObject> heldObjs = new List<GameObject>();
 
     void Start()
     {
+        Setup();
+    }
+    public void Setup()
+    {
+
+        nameEdit.enabled = false;
         controlPanel.enabled = false;
         arms = GetComponentsInChildren<Arm>();
         PlayerCam = Camera.main;
         camPos = cam.transform.position;
         camRot = cam.transform.rotation;
-        
+        if (!Directory.Exists(Application.persistentDataPath + "/Machines/" + type))
+        {
+            Directory.CreateDirectory(Application.persistentDataPath + "/Machines/" + type);
+        }
+        if(machineName != null) {
+            LoadData(machineName);
+        }
         cameraSwitch = FindObjectOfType<CamSwitch>();
     }
     public void OpenControlPanel()
@@ -62,7 +80,7 @@ public class BaseScript : MonoBehaviour
         if (workingArms != 0 && state == "idle")
         {
             state = "working";
-        } 
+        }
         workingArms = 0;
         switch (state)
         {
@@ -97,6 +115,7 @@ public class BaseScript : MonoBehaviour
                         arm.holdPoint.position = arm.holdingObject.transform.position;
                     }
                 }
+                machineName = nameEdit.GetComponentInChildren<InputField>().text;
                 CheckForMovementClick();
                 if (Input.GetKeyDown(KeyCode.Tab)) ExitCam();
                 break;
@@ -107,6 +126,7 @@ public class BaseScript : MonoBehaviour
     }
     IEnumerator CameraCo(float duration)
     {
+        nameEdit.enabled = true;
         state = "editing";
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -126,6 +146,7 @@ public class BaseScript : MonoBehaviour
     }
     IEnumerator CameraExitCo(float duration)
     {
+        nameEdit.enabled = false;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         Vector3 startPos = cam.transform.position;
@@ -143,11 +164,12 @@ public class BaseScript : MonoBehaviour
     }
     public virtual void SwitchCam()
     {
-        if(state == "paused") {
-        closeControlPanel();
-        state = "editing";
-        if (currentCo != null) StopCoroutine(currentCo);
-        currentCo = StartCoroutine(CameraCo(.5f));
+        if (state == "paused")
+        {
+            closeControlPanel();
+            state = "editing";
+            if (currentCo != null) StopCoroutine(currentCo);
+            currentCo = StartCoroutine(CameraCo(.5f));
         }
     }
     public void TogglePause()
@@ -162,8 +184,66 @@ public class BaseScript : MonoBehaviour
         }
         closeControlPanel();
     }
+    public void SaveData()
+    {
+        List<ArmData> armDatas = new List<ArmData>();
+        foreach (Arm arm in arms)
+        {
+            ArmData armData = new ArmData();
+            armData.holdPos = arm.targetPoint.localPosition;
+            armData.holdRot = arm.targetPoint.rotation;
+            armData.name = arm.name;
+            armDatas.Add(armData);
+        }
+        MachineData data = new MachineData();
+        data.arms = armDatas.ToArray();
+        data.name = machineName;
+        data.type = type;
+        string json = JsonUtility.ToJson(data);
+        string saveFile = Application.persistentDataPath + "/Machines/" + type + "/" + machineName + ".data";
+        File.WriteAllText(saveFile, json);
+    }
+    public void LoadData()
+    {
+        string saveFile = Application.persistentDataPath + "/Machines/" + type + "/" + machineName + ".data";
+        string json = File.ReadAllText(saveFile);
+        MachineData data = JsonUtility.FromJson<MachineData>(json);
+        foreach (Arm child in arms)
+        {
+            foreach (ArmData arm in data.arms)
+            {
+                if (child.name == arm.name)
+                {
+                    child.holdPoint.localPosition = arm.holdPos;
+                    child.holdPoint.rotation = arm.holdRot;
+                    child.targetPoint.localPosition = arm.holdPos;
+                    child.targetPoint.rotation = arm.holdRot;
+                }
+            }
+        }
+    }
+        public void LoadData(string loadName)
+    {
+        string saveFile = Application.persistentDataPath + "/Machines/" + type + "/" + loadName + ".data";
+        string json = File.ReadAllText(saveFile);
+        MachineData data = JsonUtility.FromJson<MachineData>(json);
+        foreach (Arm child in arms)
+        {
+            foreach (ArmData arm in data.arms)
+            {
+                if (child.name == arm.name)
+                {
+                    child.holdPoint.localPosition = arm.holdPos;
+                    child.holdPoint.rotation = arm.holdRot;
+                    child.targetPoint.localPosition = arm.holdPos;
+                    child.targetPoint.rotation = arm.holdRot;
+                }
+            }
+        }
+    }
     public virtual void ExitCam()
     {
+
         state = "paused";
         if (move) Destroy(move);
         if (currentCo != null) StopCoroutine(currentCo);
@@ -176,27 +256,27 @@ public class BaseScript : MonoBehaviour
         {
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, Mathf.Infinity))
+            LayerMask mask = LayerMask.GetMask("factoryObj");
+            mask = ~mask;
+            if (Physics.Raycast(ray, out hit, Mathf.Infinity, mask))
             {
                 print(hit.collider.gameObject);
-                foreach (GameObject obj in heldObjs)
-                {
-                    print(obj);
-                }
-                if (hit.collider.tag == "factoryObj" && heldObjs.Contains(hit.collider.gameObject))
+                var hitArm = hit.collider.gameObject.GetComponent<Arm>();
+                if(hitArm)
+                if (arms.ToList().Contains(hitArm))
                 {
                     print(FindObjectsOfType<MoveObject>().Length);
                     if (FindObjectsOfType<MoveObject>().Length == 0)
                     {
-                        move = Instantiate(Resources.Load<GameObject>("Move Prefab"), hit.collider.gameObject.transform);
+                        move = Instantiate(Resources.Load<GameObject>("Move Prefab"), hitArm.targetPoint);
                         print("w");
-                        move.transform.parent = hit.collider.gameObject.GetComponent<ProductionObject>().holdingArm.targetPoint;
+                        move.transform.parent = hitArm.targetPoint;
                     }
                     else
                     {
-                        move.transform.position = hit.collider.gameObject.transform.position;
-                        move.transform.rotation = hit.collider.gameObject.transform.rotation;
-                        move.transform.parent = hit.collider.gameObject.GetComponent<ProductionObject>().holdingArm.targetPoint;
+                        move.transform.position = hitArm.targetPoint.position;
+                        move.transform.rotation = hitArm.targetPoint.rotation;
+                        move.transform.parent = hitArm.targetPoint;
                     }
                 }
             }
@@ -218,7 +298,7 @@ public class BaseScript : MonoBehaviour
                 }
             }
             print(pickupObj);
-            if(state == "idle") state = "working";
+            if (state == "idle") state = "working";
             if (GetClosestArm(pickupObj.gameObject).holdingObject == null) GetClosestArm(pickupObj.gameObject).GrabObject(pickupObj);
         }
     }
@@ -238,4 +318,11 @@ public class BaseScript : MonoBehaviour
         }
         return tMin.gameObject.GetComponent<Arm>();
     }
+}
+
+public class MachineData
+{
+    public ArmData[] arms;
+    public string name;
+    public string type;
 }

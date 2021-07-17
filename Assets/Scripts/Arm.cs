@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using System;
 public class Arm : MonoBehaviour
 {
     public Transform targetPoint;
@@ -40,12 +40,7 @@ public class Arm : MonoBehaviour
         objectToGrab.holdingArm = this;
         holdingObject = objectToGrab.gameObject;
         objectToGrab.GetComponent<Rigidbody>().isKinematic = true;
-                foreach(ProductionObject obj in holdingObject.GetComponent<ProductionObject>().connectedObjects) {
-            foreach(Collider col in obj.GetComponents<Collider>()) {
-                if(!col.isTrigger)
-                col.enabled = false;
-            }
-        }
+        holdingObject.GetComponent<ProductionObject>().ToggleCollision(false);
         StartCoroutine(GrabObjectCo(objectToGrab.gameObject));
     }
     public void Drop()
@@ -59,22 +54,9 @@ public class Arm : MonoBehaviour
         state = "idle";
         if (holdingObject)
         {
-            foreach (ProductionObject obj in holdingObject.GetComponent<ProductionObject>().connectedObjects)
-            {
-                foreach (Collider col in obj.GetComponents<Collider>())
-                {
-                    col.enabled = true;
-                }
-            }
+            holdingObject.GetComponent<ProductionObject>().ToggleCollision(true);
             holdingObject.GetComponent<ProductionObject>().holdingArm = null;
-            if (holdingObject.GetComponent<ProductionObject>().parent)
-            {
-                holdingObject.transform.parent = holdingObject.GetComponent<ProductionObject>().parent.transform;
-            }
-            else
-            {
-                holdingObject.transform.parent = null;
-            }
+            holdingObject.GetComponent<ProductionObject>().parent.transform.parent = null;
             holdingObject = null;
             holdingRB.isKinematic = false;
             holdingRB = null;
@@ -119,7 +101,7 @@ public class Arm : MonoBehaviour
         onGrabObject?.Invoke();
         targetPoint.position = objectToGrab.transform.position;
         holdingObject = objectToGrab;
-        holdingObject.transform.parent = targetPoint;
+        holdingObject.GetComponent<ProductionObject>().parent.transform.parent = targetPoint;
         holdingRB = holdingObject.GetComponent<Rigidbody>();
         MoveWithRot(holdPoint.position, holdPoint.rotation);
     }
@@ -162,4 +144,11 @@ public class Arm : MonoBehaviour
     {
         return;
     }
+}
+[Serializable]
+public class ArmData {
+    public string name;
+    public Vector3 holdPos;
+    public Quaternion holdRot;
+
 }

@@ -29,13 +29,9 @@ public class SaveUI : MonoBehaviour
             LayerMask Layermask = LayerMask.GetMask("factoryObj");
             if (Physics.Raycast(camSwitch.activeCamera.transform.position, camSwitch.activeCamera.transform.forward, out hit, 15f, Layermask))
             {
-                if(hit.transform.parent == null) {
-                    GameObject parent = new GameObject();
-                    hit.transform.parent = parent.transform;
-                }
                 saveCanvas.enabled = true;
-                objToSave = hit.transform.parent.gameObject;
-                SaveObject.CenterParent(objToSave);
+                objToSave = hit.transform.root.gameObject;
+                //SaveObject.CenterParent(objToSave);
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
                 camSwitch.focused = false;
